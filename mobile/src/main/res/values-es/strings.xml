@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">LyricsAuto</string>
+    <string name="btn_grant_permission">Otorgar acceso a notificaciones</string>
+    <string name="lyrics_channel_name">Sincronización de letras</string>
+    <string name="lyrics_current_label">Letra actual</string>
+    <string name="service_label">Servicio de letras</string>
+    <string name="sw_enable_lyrics">Activar sincronización de letras</string>
+</resources>

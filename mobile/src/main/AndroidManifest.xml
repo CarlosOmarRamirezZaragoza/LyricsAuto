@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <uses-permission android:name="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE"
+        tools:ignore="ProtectedPermissions" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="androidx.car.app.NAVIGATION_TEMPLATES" />
+
+    <application
+        android:name=".LyricsApp"
+        android:allowBackup="true"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.LyricsAuto">
+
+        <service
+            android:name=".mobile.service.LyricsNotificationListener"
+            android:exported="true"
+            android:label="@string/service_label"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+        </service>
+
+        <service
+            android:name="com.frish.lyricsauto.shared.MyCarAppService"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="androidx.car.app.CarAppService" />
+                <category android:name="com.google.android.gms.car.category.NAVIGATION" />
+            </intent-filter>
+            <meta-data
+                android:name="distractionOptimized"
+                android:value="true" />
+        </service>
+
+        <receiver
+            android:name=".mobile.service.LyricsReplyReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.frish.lyricsauto.ACTION_REPLY" />
+            </intent-filter>
+        </receiver>
+
+        <!-- It declares support for Android Auto -->
+        <meta-data
+            android:name="com.google.android.gms.car.application"
+            android:resource="@xml/automotive_app_desc" />
+
+        <meta-data
+            android:name="androidx.car.app.notification.NotificationMetadata"
+            android:value="com.frish.lyricsauto.shared.MyCarAppService" />
+
+        <meta-data
+            android:name="com.google.android.gms.car.messaging.EXTENDERS"
+            android:value="androidx.car.app.messaging.CarMessagingExtender" />
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+
+</manifest>

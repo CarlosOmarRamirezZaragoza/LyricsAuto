@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">LyricsAuto</string>
+    <string name="btn_grant_permission">Grant Notification Access</string>
+    <string name="lyrics_channel_name">Lyrics Sync</string>
+    <string name="lyrics_current_label">Letra actual</string>
+    <string name="service_label">Lyrics Sync Service</string>
+    <string name="sw_enable_lyrics">Enable Lyrics Sync</string>
+</resources>
