@@ -18,6 +18,7 @@ import com.frish.lyricsauto.shared.domain.repository.MediaAction
 import com.frish.lyricsauto.shared.domain.repository.MusicStateRepository
 import com.frish.lyricsauto.shared.domain.usecase.GetLyricsUseCase
 import com.frish.lyricsauto.shared.domain.usecase.IsLyricsEnabledUseCase
+import com.frish.lyricsauto.shared.util.AppLogger
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
@@ -29,6 +30,7 @@ class LyricsNotificationListener : NotificationListenerService() {
     @Inject lateinit var getLyricsUseCase: GetLyricsUseCase
     @Inject lateinit var isLyricsEnabledUseCase: IsLyricsEnabledUseCase
     @Inject lateinit var musicStateRepository: MusicStateRepository
+    @Inject lateinit var logger: AppLogger
 
     private val _serviceScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     private var _mediaSessionManager: MediaSessionManager? = null
@@ -44,7 +46,7 @@ class LyricsNotificationListener : NotificationListenerService() {
 
     override fun onCreate() {
         super.onCreate()
-        Log.d(TAG, "!!! Service Created !!!")
+        logger.i(TAG, "!!! Service Created !!!")
         _mediaSessionManager = getSystemService(MEDIA_SESSION_SERVICE) as MediaSessionManager
         observeMetadata()
         observeMediaActions()
@@ -52,7 +54,7 @@ class LyricsNotificationListener : NotificationListenerService() {
 
     override fun onListenerConnected() {
         super.onListenerConnected()
-        Log.d(TAG, "!!! Listener Connected !!!")
+        logger.i(TAG, "!!! Listener Connected !!!")
         setupMediaListener()
     }
 
@@ -67,13 +69,14 @@ class LyricsNotificationListener : NotificationListenerService() {
                 }
                 .collect { result ->
                     result.onSuccess { lyrics ->
-                        Log.d(TAG, "Lyrics found for: ${lyrics.trackName}")
+                        logger.d(TAG, "Lyrics found for: ${lyrics.trackName}")
                         _currentLyrics = lyrics
                         musicStateRepository.updateFullLyrics(lyrics)
                         _lastSentLine = null
                         startLyricsSync()
                     }
-                    result.onFailure {
+                    result.onFailure { error ->
+                        logger.e(TAG, "Lyrics not found", error)
                         musicStateRepository.updateFullLyrics(null)
                         musicStateRepository.updateLine("Letra no encontrada")
                     }
@@ -116,6 +119,7 @@ class LyricsNotificationListener : NotificationListenerService() {
 
     private fun updateActiveController(controller: MediaController) {
         val pkg = controller.packageName
+        logger.i(TAG, "Updating active controller: $pkg")
         if (pkg == packageName || pkg.contains("android") || pkg.contains("phone")) return
         _activeController?.unregisterCallback(_controllerCallback)
         _activeController = controller

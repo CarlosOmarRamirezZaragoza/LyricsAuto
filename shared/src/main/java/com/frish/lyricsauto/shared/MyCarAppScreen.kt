@@ -28,6 +28,7 @@ import androidx.lifecycle.lifecycleScope
 import com.frish.lyricsauto.shared.R
 import com.frish.lyricsauto.shared.domain.repository.MusicStateRepository
 import com.frish.lyricsauto.shared.domain.usecase.DeleteLyricsUseCase
+import com.frish.lyricsauto.shared.util.AppLogger
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.isActive
@@ -36,7 +37,8 @@ import kotlinx.coroutines.launch
 class MyCarAppScreen(
     carContext: CarContext,
     private val musicStateRepository: MusicStateRepository,
-    private val deleteLyricsUseCase: DeleteLyricsUseCase
+    private val deleteLyricsUseCase: DeleteLyricsUseCase,
+    private val logger: AppLogger
 ) : Screen(carContext), SurfaceCallback {
 
     private var _surfaceContainer: SurfaceContainer? = null
@@ -82,17 +84,25 @@ class MyCarAppScreen(
     }
 
     override fun onSurfaceAvailable(surfaceContainer: SurfaceContainer) {
+        logger.i("MyCarAppScreen", "Surface Available: ${surfaceContainer.surface}")
         _surfaceContainer = surfaceContainer
         render(surfaceContainer)
     }
 
     override fun onSurfaceDestroyed(surfaceContainer: SurfaceContainer) {
+        logger.i("MyCarAppScreen", "Surface Destroyed")
         _surfaceContainer = null
     }
 
     private fun render(container: SurfaceContainer) {
-        val surface = container.surface ?: return
-        if (!surface.isValid) return
+        val surface = container.surface ?: run {
+            logger.e("MyCarAppScreen", "Render failed: Surface is null")
+            return
+        }
+        if (!surface.isValid) {
+            logger.e("MyCarAppScreen", "Render failed: Surface is invalid")
+            return
+        }
         
         try {
             val canvas = surface.lockCanvas(null) ?: return

@@ -13,6 +13,7 @@ import com.frish.lyricsauto.shared.data.mapper.toLyrics
 import com.frish.lyricsauto.shared.data.remote.api.LyricsApi
 import com.frish.lyricsauto.shared.domain.model.Lyrics
 import com.frish.lyricsauto.shared.domain.repository.LyricsRepository
+import com.frish.lyricsauto.shared.util.AppLogger
 import com.google.gson.Gson
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -26,13 +27,17 @@ import javax.inject.Singleton
 @Singleton
 class LyricsRepositoryImpl @Inject constructor(
     private val api: LyricsApi,
-    private val _lyricsDao: LyricsDao
+    private val _lyricsDao: LyricsDao,
+    private val _logger: AppLogger
 ) : LyricsRepository {
 
     override fun getLyrics(artist: String, track: String): Flow<Result<Lyrics>> = flow {
         val spotifyId = "$artist - $track"
+        _logger.d("LyricsRepo", "Fetching lyrics for: $spotifyId")
+        
         val cached = getLyricsById(spotifyId)
         if (cached != null) {
+            _logger.i("LyricsRepo", "Found cached lyrics for: $spotifyId")
             emit(Result.success(cached))
             return@flow
         }
@@ -46,12 +51,14 @@ class LyricsRepositoryImpl @Inject constructor(
 
         while (retryCount < maxRetries && !success) {
             try {
+                _logger.d("LyricsRepo", "API Call (Attempt ${retryCount + 1}): $cleanArtist - $cleanTrack")
                 val response = api.getLyrics(cleanArtist, cleanTrack)
                 val domain = response.toDomain()
                 saveLyrics(domain, spotifyId)
                 emit(Result.success(domain))
                 success = true
             } catch (e: Exception) {
+                _logger.e("LyricsRepo", "API Error", e)
                 if (e.message?.contains("503") == true || e.message?.contains("520") == true) {
                     retryCount++
                     delay(1000L * retryCount)
@@ -81,7 +88,10 @@ class LyricsRepositoryImpl @Inject constructor(
         val linesJson = Gson().toJson(lyrics.lines)
         val dataSize = (lyrics.plainLyrics?.length?.toLong() ?: 0L) + linesJson.length.toLong()
         
+        _logger.d("LyricsRepo", "Saving to DB: $spotifyId (Size: $dataSize bytes)")
+        
         while (_lyricsDao.getCount() >= 1000 || (_lyricsDao.getTotalSize() ?: 0L) + dataSize > 200 * 1024 * 1024) {
+            _logger.i("LyricsRepo", "Storage limit reached, deleting oldest entry")
             _lyricsDao.deleteOldest()
         }
         
@@ -89,6 +99,7 @@ class LyricsRepositoryImpl @Inject constructor(
     }
 
     override suspend fun deleteLyrics(spotifyId: String) {
+        _logger.i("LyricsRepo", "Deleting lyrics: $spotifyId")
         _lyricsDao.deleteBySpotifyId(spotifyId)
     }
 

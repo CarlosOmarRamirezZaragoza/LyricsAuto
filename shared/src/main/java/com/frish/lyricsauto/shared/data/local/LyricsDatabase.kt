@@ -7,15 +7,18 @@ package com.frish.lyricsauto.shared.data.local
 
 import androidx.room.Database
 import androidx.room.RoomDatabase
+import com.frish.lyricsauto.shared.data.local.dao.LogDao
 import com.frish.lyricsauto.shared.data.local.dao.LyricsDao
+import com.frish.lyricsauto.shared.data.local.entity.LogEntity
 import com.frish.lyricsauto.shared.data.local.entity.LyricsEntity
 import com.frish.lyricsauto.shared.data.local.entity.LyricsFtsEntity
 
 @Database(
-    entities = [LyricsEntity::class, LyricsFtsEntity::class],
-    version = 1,
+    entities = [LyricsEntity::class, LyricsFtsEntity::class, LogEntity::class],
+    version = 2,
     exportSchema = false
 )
 abstract class LyricsDatabase : RoomDatabase() {
     abstract val lyricsDao: LyricsDao
+    abstract val logDao: LogDao
 }

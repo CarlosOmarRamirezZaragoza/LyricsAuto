@@ -8,6 +8,7 @@ package com.frish.lyricsauto.shared.di
 import android.content.Context
 import androidx.room.Room
 import com.frish.lyricsauto.shared.data.local.LyricsDatabase
+import com.frish.lyricsauto.shared.data.local.dao.LogDao
 import com.frish.lyricsauto.shared.data.local.dao.LyricsDao
 import dagger.Module
 import dagger.Provides
@@ -29,12 +30,20 @@ object DatabaseModule {
             context,
             LyricsDatabase::class.java,
             "lyrics_db"
-        ).build()
+        )
+        .fallbackToDestructiveMigration()
+        .build()
     }
 
     @Provides
     @Singleton
     fun provideLyricsDao(db: LyricsDatabase): LyricsDao {
         return db.lyricsDao
+    }
+
+    @Provides
+    @Singleton
+    fun provideLogDao(db: LyricsDatabase): LogDao {
+        return db.logDao
     }
 }

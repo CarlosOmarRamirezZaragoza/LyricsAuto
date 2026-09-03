@@ -65,6 +65,16 @@ The app implements a **No-Backend** policy with local persistence to minimize da
     *   **Mobile**: A scrollable list with **Swipe-to-Delete** functionality allows manual management of the library.
     *   **Automotive**: A dedicated delete button in the car interface allows removing the current song's lyrics on-the-go.
 
+### 6. Debugging & Diagnostic Tools
+The app includes a built-in diagnostic system to troubleshoot integration issues on physical hardware.
+*   **Persistent App Logging**: All internal events (Media Session changes, API calls, Surface availability) are stored in a dedicated Room table.
+*   **Crash Guard**: A global uncaught exception handler captures fatal errors and saves the stack trace to the local database before the app closes.
+*   **Session-Based Grouping**: Logs are automatically grouped by execution sessions (from app start to finish).
+*   **Hidden Diagnostic Menu**: 
+    1. Open the mobile app.
+    2. **Tap the "LyricsAuto" title 5 times**.
+    3. Explore session history and detailed logs to identify issues with Android Auto connectivity or rendering.
+
 ---
 
 ## 🚀 Setup & Execution Guide

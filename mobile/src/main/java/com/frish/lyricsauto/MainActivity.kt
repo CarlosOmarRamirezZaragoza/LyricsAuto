@@ -27,7 +27,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
+import androidx.compose.foundation.clickable
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.frish.lyricsauto.mobile.presentation.logs.LogScreen
+import com.frish.lyricsauto.mobile.presentation.logs.LogViewModel
 import com.frish.lyricsauto.mobile.presentation.lyrics.LyricsListScreen
 import com.frish.lyricsauto.mobile.presentation.lyrics.LyricsViewModel
 import dagger.hilt.android.AndroidEntryPoint
@@ -37,6 +40,7 @@ import kotlinx.coroutines.delay
 class MainActivity : ComponentActivity() {
 
     private val viewModel: LyricsViewModel by viewModels()
+    private val logViewModel: LogViewModel by viewModels()
 
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -52,6 +56,8 @@ class MainActivity : ComponentActivity() {
         }
 
         setContent {
+            var showLogs by remember { mutableStateOf(false) }
+
             MaterialTheme(
                 colorScheme = darkColorScheme()
             ) {
@@ -59,7 +65,17 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    MainScreen(viewModel)
+                    if (showLogs) {
+                        LogScreen(
+                            viewModel = logViewModel,
+                            onBack = { showLogs = false }
+                        )
+                    } else {
+                        MainScreen(
+                            viewModel = viewModel,
+                            onTitleClick = { showLogs = true }
+                        )
+                    }
                 }
             }
         }
@@ -67,11 +83,15 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun MainScreen(viewModel: LyricsViewModel) {
+fun MainScreen(
+    viewModel: LyricsViewModel,
+    onTitleClick: () -> Unit
+) {
     val context = LocalContext.current
     val isEnabled by viewModel.isEnabled.collectAsStateWithLifecycle()
     val savedLyrics by viewModel.savedLyrics.collectAsStateWithLifecycle()
     var isNotificationGranted by remember { mutableStateOf(false) }
+    var clickCount by remember { mutableStateOf(0) }
 
     LaunchedEffect(Unit) {
         while (true) {
@@ -90,7 +110,14 @@ fun MainScreen(viewModel: LyricsViewModel) {
             text = stringResource(R.string.app_name),
             fontSize = 32.sp,
             fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.primary
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.clickable {
+                clickCount++
+                if (clickCount >= 5) {
+                    onTitleClick()
+                    clickCount = 0
+                }
+            }
         )
         
         Spacer(modifier = Modifier.height(24.dp))
