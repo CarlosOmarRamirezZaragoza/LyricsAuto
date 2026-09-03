@@ -9,6 +9,7 @@ import androidx.car.app.CarAppService
 import androidx.car.app.Session
 import androidx.car.app.validation.HostValidator
 import com.frish.lyricsauto.shared.domain.repository.MusicStateRepository
+import com.frish.lyricsauto.shared.domain.usecase.DeleteLyricsUseCase
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
@@ -16,12 +17,13 @@ import javax.inject.Inject
 class MyCarAppService : CarAppService() {
 
     @Inject lateinit var musicStateRepository: MusicStateRepository
+    @Inject lateinit var deleteLyricsUseCase: DeleteLyricsUseCase
 
     override fun createHostValidator(): HostValidator {
         return HostValidator.ALLOW_ALL_HOSTS_VALIDATOR
     }
 
     override fun onCreateSession(): Session {
-        return MyCarAppSession(musicStateRepository)
+        return MyCarAppSession(musicStateRepository, deleteLyricsUseCase)
     }
 }

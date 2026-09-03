@@ -5,4 +5,9 @@
     <string name="lyrics_current_label">Letra actual</string>
     <string name="service_label">Servicio de letras</string>
     <string name="sw_enable_lyrics">Activar sincronización de letras</string>
+    <string name="status_permission_granted">Acceso a notificaciones: CONCEDIDO</string>
+    <string name="status_permission_denied">Acceso a notificaciones: DENEGADO</string>
+    <string name="saved_lyrics_title">Letras Guardadas</string>
+    <string name="empty_lyrics_msg">No hay letras guardadas</string>
+    <string name="swipe_to_delete">Desliza para eliminar</string>
 </resources>

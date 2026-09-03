@@ -78,6 +78,12 @@ class MusicStateRepositoryImpl @Inject constructor() : MusicStateRepository {
         _currentArtwork.value = bitmap
     }
 
+    private var _pendingDeletion = false
+
+    override fun scheduleDeletion() {
+        _pendingDeletion = true
+    }
+
     override fun playPause() {
         _repositoryScope.launch { _mediaAction.emit(MediaAction.PLAY_PAUSE) }
     }

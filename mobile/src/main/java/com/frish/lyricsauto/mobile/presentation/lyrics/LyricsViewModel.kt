@@ -8,6 +8,9 @@ package com.frish.lyricsauto.mobile.presentation.lyrics
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.frish.lyricsauto.shared.domain.model.Lyrics
+import com.frish.lyricsauto.shared.domain.usecase.DeleteLyricsUseCase
+import com.frish.lyricsauto.shared.domain.usecase.GetSavedLyricsUseCase
 import com.frish.lyricsauto.shared.domain.usecase.IsLyricsEnabledUseCase
 import com.frish.lyricsauto.shared.domain.usecase.ToggleLyricsUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -20,15 +23,27 @@ import javax.inject.Inject
 @HiltViewModel
 class LyricsViewModel @Inject constructor(
     private val isLyricsEnabledUseCase: IsLyricsEnabledUseCase,
-    private val toggleLyricsUseCase: ToggleLyricsUseCase
+    private val toggleLyricsUseCase: ToggleLyricsUseCase,
+    private val getSavedLyricsUseCase: GetSavedLyricsUseCase,
+    private val deleteLyricsUseCase: DeleteLyricsUseCase
 ) : ViewModel() {
 
     val isEnabled: StateFlow<Boolean> = isLyricsEnabledUseCase()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
+    val savedLyrics: StateFlow<List<Lyrics>> = getSavedLyricsUseCase()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
     fun toggleService(enabled: Boolean) {
         viewModelScope.launch {
             toggleLyricsUseCase(enabled)
+        }
+    }
+
+    fun deleteLyrics(lyrics: Lyrics) {
+        viewModelScope.launch {
+            // Using artist - track as spotifyId for now as per repository logic
+            deleteLyricsUseCase("${lyrics.artistName} - ${lyrics.trackName}")
         }
     }
 }

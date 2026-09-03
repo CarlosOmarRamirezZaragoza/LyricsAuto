@@ -39,20 +39,15 @@
             android:exported="true">
             <intent-filter>
                 <action android:name="androidx.car.app.CarAppService" />
-                <category android:name="com.google.android.gms.car.category.NAVIGATION" />
+                <category android:name="com.google.android.gms.car.category.POI" />
             </intent-filter>
+            <meta-data
+                android:name="androidx.car.app.notification.NotificationMetadata"
+                android:value="com.frish.lyricsauto.shared.MyCarAppService" />
             <meta-data
                 android:name="distractionOptimized"
                 android:value="true" />
         </service>
-
-        <receiver
-            android:name=".mobile.service.LyricsReplyReceiver"
-            android:exported="false">
-            <intent-filter>
-                <action android:name="com.frish.lyricsauto.ACTION_REPLY" />
-            </intent-filter>
-        </receiver>
 
         <!-- It declares support for Android Auto -->
         <meta-data
@@ -62,10 +57,6 @@
         <meta-data
             android:name="androidx.car.app.notification.NotificationMetadata"
             android:value="com.frish.lyricsauto.shared.MyCarAppService" />
-
-        <meta-data
-            android:name="com.google.android.gms.car.messaging.EXTENDERS"
-            android:value="androidx.car.app.messaging.CarMessagingExtender" />
 
         <activity
             android:name=".MainActivity"

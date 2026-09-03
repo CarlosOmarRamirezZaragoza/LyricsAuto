@@ -1,7 +1,7 @@
 /**
  * Developer: CORZ (https://www.linkedin.com/in/omar-ramirez-6a51b7141/)
  * Date: 2024-09-01
- * Description: Service with seeking capabilities and metadata extraction.
+ * Description: Service with immediate metadata updates and seeking capabilities.
  */
 package com.frish.lyricsauto.mobile.service
 
@@ -44,6 +44,7 @@ class LyricsNotificationListener : NotificationListenerService() {
 
     override fun onCreate() {
         super.onCreate()
+        Log.d(TAG, "!!! Service Created !!!")
         _mediaSessionManager = getSystemService(MEDIA_SESSION_SERVICE) as MediaSessionManager
         observeMetadata()
         observeMediaActions()
@@ -51,6 +52,7 @@ class LyricsNotificationListener : NotificationListenerService() {
 
     override fun onListenerConnected() {
         super.onListenerConnected()
+        Log.d(TAG, "!!! Listener Connected !!!")
         setupMediaListener()
     }
 
@@ -61,11 +63,11 @@ class LyricsNotificationListener : NotificationListenerService() {
                 .debounce(500L)
                 .distinctUntilChanged()
                 .flatMapLatest { (artist, title) ->
-                    musicStateRepository.updateSong(artist, title)
                     getLyricsUseCase(artist, title)
                 }
                 .collect { result ->
                     result.onSuccess { lyrics ->
+                        Log.d(TAG, "Lyrics found for: ${lyrics.trackName}")
                         _currentLyrics = lyrics
                         musicStateRepository.updateFullLyrics(lyrics)
                         _lastSentLine = null
@@ -133,6 +135,9 @@ class LyricsNotificationListener : NotificationListenerService() {
     private fun handleMetadataChange(metadata: MediaMetadata?) {
         val title = metadata?.getString(MediaMetadata.METADATA_KEY_TITLE) ?: return
         val artist = metadata.getString(MediaMetadata.METADATA_KEY_ARTIST) ?: ""
+        
+        // Update song info IMMEDIATELY
+        musicStateRepository.updateSong(artist, title)
         
         val duration = metadata.getLong(MediaMetadata.METADATA_KEY_DURATION)
         musicStateRepository.updateDuration(duration)

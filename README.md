@@ -20,12 +20,15 @@ This software is developed to demonstrate technical capabilities within the Andr
 
 ## 🛠 Tech Stack
 *   **Kotlin**: Primary language with structured concurrency.
+*   **Jetpack Compose**: Modern declarative UI for the mobile settings interface.
 *   **Clean Architecture**: Separation of concerns into Data, Domain, and Presentation layers.
 *   **Hilt**: Dependency injection for robust component management.
 *   **Coroutines & Flow**: Reactive data streams for real-time synchronization.
 *   **Android Car App Library (Android Auto)**: Template-based and Surface-based rendering for vehicles.
 *   **Retrofit & OkHttp**: LRCLIB API integration for lyrics retrieval.
 *   **MediaSessionManager**: Intelligent tracking of active media players (Spotify, YouTube Music).
+*   **Room Database**: Local persistence for offline lyrics storage and caching.
+*   **FTS4 (Full-Text Search)**: High-speed local search optimization for stored lyrics.
 
 ---
 
@@ -44,11 +47,23 @@ The `MusicStateRepository` holds the global state using `StateFlow`. It synchron
 *   `fullLyrics`: The complete set of timestamps and lines.
 *   `currentArtwork`: The blurred album art used for the background.
 
-### 3. Custom Rendering (The Karaoke Effect)
+### 3. Settings Interface
+The mobile settings screen is built using **Jetpack Compose**, providing a modern and reactive user experience for toggling the service and checking permission statuses without relying on traditional XML layouts.
+
+### 4. Custom Rendering (The Karaoke Effect)
 Instead of standard templates, we use a `SurfaceCallback` to draw directly onto the car's screen using `Canvas`.
 *   **Deterministic Snap Logic**: To ensure the lyrics never desync, we calculate the active word index based on character weights. Words are highlighted in **Yellow** exactly as the singer utters them.
 *   **Auto-Scaling & Margins**: A 15% safe-zone margin is implemented to prevent text clipping. If a line is too long, the font size automatically shrinks to fit the width.
 *   **Split Screen (Dashboard)**: By declaring the app as a `NAVIGATION` category and using `MapTemplate`, the app can occupy the primary slot in the Android Auto Dashboard (Coolwalk) alongside music players or maps.
+
+### 5. Local Storage & Capacity Management
+The app implements a **No-Backend** policy with local persistence to minimize data usage and ensure offline availability.
+*   **Intelligent Caching**: Lyrics are stored in a Room database the first time they are downloaded. Subsequent plays of the same song use the local copy.
+*   **Quota Enforcement**: To preserve device storage, the app strictly maintains a limit of **1000 songs** or **200MB** of lyrics data. It automatically purges the oldest records (LRU) when these limits are reached.
+*   **Fast Search**: Uses SQLite's FTS4 extension to allow instantaneous searching through thousands of stored songs.
+*   **Hybrid Management**: 
+    *   **Mobile**: A scrollable list with **Swipe-to-Delete** functionality allows manual management of the library.
+    *   **Automotive**: A dedicated delete button in the car interface allows removing the current song's lyrics on-the-go.
 
 ---
 

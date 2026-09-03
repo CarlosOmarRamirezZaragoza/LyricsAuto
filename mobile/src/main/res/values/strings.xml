@@ -5,4 +5,9 @@
     <string name="lyrics_current_label">Letra actual</string>
     <string name="service_label">Lyrics Sync Service</string>
     <string name="sw_enable_lyrics">Enable Lyrics Sync</string>
+    <string name="status_permission_granted">Notification Access: GRANTED</string>
+    <string name="status_permission_denied">Notification Access: DENIED</string>
+    <string name="saved_lyrics_title">Saved Lyrics</string>
+    <string name="empty_lyrics_msg">No saved lyrics found</string>
+    <string name="swipe_to_delete">Swipe to delete</string>
 </resources>

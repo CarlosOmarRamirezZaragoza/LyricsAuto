@@ -42,6 +42,12 @@ dependencies {
     // Car App
     implementation(libs.androidx.app)
 
+    // Room
+    val roomVersion = "2.6.1"
+    implementation("androidx.room:room-runtime:$roomVersion")
+    implementation("androidx.room:room-ktx:$roomVersion")
+    kapt("androidx.room:room-compiler:$roomVersion")
+
     // Network
     implementation(libs.retrofit)
     implementation(libs.retrofit.converter.gson)

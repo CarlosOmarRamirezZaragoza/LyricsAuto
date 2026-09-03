@@ -15,4 +15,34 @@ interface LyricsRepository {
      * Returns a Flow of Result containing the [Lyrics] model.
      */
     fun getLyrics(artist: String, track: String): Flow<Result<Lyrics>>
+
+    /**
+     * Returns a Flow of all locally saved lyrics.
+     */
+    fun getSavedLyrics(): Flow<List<Lyrics>>
+
+    /**
+     * Saves lyrics to local database, enforcing capacity limits.
+     */
+    suspend fun saveLyrics(lyrics: Lyrics, spotifyId: String)
+
+    /**
+     * Deletes lyrics by spotify ID.
+     */
+    suspend fun deleteLyrics(spotifyId: String)
+
+    /**
+     * Checks if lyrics exist for a given spotify ID.
+     */
+    suspend fun exists(spotifyId: String): Boolean
+
+    /**
+     * Retrieves saved lyrics by spotify ID.
+     */
+    suspend fun getLyricsById(spotifyId: String): Lyrics?
+
+    /**
+     * Searches lyrics using FTS.
+     */
+    fun searchLyrics(query: String): Flow<List<Lyrics>>
 }

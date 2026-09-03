@@ -9,12 +9,13 @@ import android.content.Intent
 import androidx.car.app.Screen
 import androidx.car.app.Session
 import com.frish.lyricsauto.shared.domain.repository.MusicStateRepository
-import javax.inject.Inject
+import com.frish.lyricsauto.shared.domain.usecase.DeleteLyricsUseCase
 
 class MyCarAppSession(
-    private val musicStateRepository: MusicStateRepository
+    private val musicStateRepository: MusicStateRepository,
+    private val deleteLyricsUseCase: DeleteLyricsUseCase
 ) : Session() {
     override fun onCreateScreen(intent: Intent): Screen {
-        return MyCarAppScreen(carContext, musicStateRepository)
+        return MyCarAppScreen(carContext, musicStateRepository, deleteLyricsUseCase)
     }
 }

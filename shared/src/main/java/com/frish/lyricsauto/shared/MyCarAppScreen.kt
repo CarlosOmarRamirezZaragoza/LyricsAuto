@@ -27,6 +27,7 @@ import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import com.frish.lyricsauto.shared.R
 import com.frish.lyricsauto.shared.domain.repository.MusicStateRepository
+import com.frish.lyricsauto.shared.domain.usecase.DeleteLyricsUseCase
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.isActive
@@ -34,7 +35,8 @@ import kotlinx.coroutines.launch
 
 class MyCarAppScreen(
     carContext: CarContext,
-    private val musicStateRepository: MusicStateRepository
+    private val musicStateRepository: MusicStateRepository,
+    private val deleteLyricsUseCase: DeleteLyricsUseCase
 ) : Screen(carContext), SurfaceCallback {
 
     private var _surfaceContainer: SurfaceContainer? = null
@@ -52,6 +54,11 @@ class MyCarAppScreen(
                 lifecycleScope.launch {
                     musicStateRepository.currentArtwork.collectLatest { 
                         _surfaceContainer?.let { render(it) }
+                        invalidate()
+                    }
+                }
+                lifecycleScope.launch {
+                    musicStateRepository.currentSong.collectLatest { 
                         invalidate()
                     }
                 }
@@ -129,6 +136,18 @@ class MyCarAppScreen(
                 paint.color = Color.YELLOW
                 canvas.drawLine(barLeft, barY, progressX, barY, paint)
                 canvas.drawCircle(progressX, barY, 12f, paint)
+
+                // Time labels
+                paint.textSize = 22f
+                paint.color = Color.WHITE
+                val currentTime = formatTime(position)
+                val totalTime = formatTime(duration)
+
+                paint.textAlign = Paint.Align.RIGHT
+                canvas.drawText(currentTime, barLeft - 20f, barY + 8f, paint)
+
+                paint.textAlign = Paint.Align.LEFT
+                canvas.drawText(totalTime, barLeft + barWidth + 20f, barY + 8f, paint)
             }
 
             // 3. Lyrics logic
@@ -232,10 +251,28 @@ class MyCarAppScreen(
         }
     }
 
+    private fun formatTime(ms: Long): String {
+        val totalSeconds = ms / 1000
+        val minutes = totalSeconds / 60
+        val seconds = totalSeconds % 60
+        return "%01d:%02d".format(minutes, seconds)
+    }
+
     override fun onGetTemplate(): Template {
         val isPlaying = musicStateRepository.isPlaying.value
         val song = musicStateRepository.currentSong.value
         val actionStrip = ActionStrip.Builder()
+            .addAction(Action.Builder()
+                .setIcon(CarIcon.Builder(IconCompat.createWithResource(carContext, android.R.drawable.ic_menu_delete)).build())
+                .setOnClickListener {
+                    lifecycleScope.launch {
+                        val song = musicStateRepository.currentSong.value
+                        if (song.isNotEmpty()) {
+                            deleteLyricsUseCase(song)
+                            musicStateRepository.updateFullLyrics(null)
+                        }
+                    }
+                }.build())
             .addAction(Action.Builder().setIcon(CarIcon.Builder(IconCompat.createWithResource(carContext, android.R.drawable.ic_media_previous)).build())
                 .setOnClickListener { musicStateRepository.previous() }.build())
             .addAction(Action.Builder().setIcon(CarIcon.Builder(IconCompat.createWithResource(carContext, if (isPlaying) android.R.drawable.ic_media_pause else android.R.drawable.ic_media_play)).build())

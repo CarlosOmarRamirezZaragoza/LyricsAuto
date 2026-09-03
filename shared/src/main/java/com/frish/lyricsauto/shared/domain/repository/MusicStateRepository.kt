@@ -27,6 +27,7 @@ interface MusicStateRepository {
     fun updateFullLyrics(lyrics: Lyrics?)
     fun updateArtwork(bitmap: Bitmap?)
 
+    fun scheduleDeletion()
     fun playPause()
     fun next()
     fun previous()
