@@ -1,7 +1,7 @@
 /**
  * Developer: CORZ (https://www.linkedin.com/in/omar-ramirez-6a51b7141/)
- * Date: 2024-09-01
- * Description: Car App Session that injects dependencies.
+ * Date: 2024-09-02
+ * Description: Car App Session that passes required dependencies to the screen.
  */
 package com.frish.lyricsauto.shared
 

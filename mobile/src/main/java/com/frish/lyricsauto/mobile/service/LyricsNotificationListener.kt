@@ -6,39 +6,32 @@
 package com.frish.lyricsauto.mobile.service
 
 import android.content.ComponentName
-import android.content.Context
 import android.media.MediaMetadata
 import android.media.session.MediaController
 import android.media.session.MediaSessionManager
 import android.media.session.PlaybackState
 import android.service.notification.NotificationListenerService
-import android.util.Log
-import com.frish.lyricsauto.shared.domain.model.Lyrics
+import com.frish.lyricsauto.shared.domain.manager.LyricsSyncManager
 import com.frish.lyricsauto.shared.domain.repository.MediaAction
 import com.frish.lyricsauto.shared.domain.repository.MusicStateRepository
-import com.frish.lyricsauto.shared.domain.usecase.GetLyricsUseCase
-import com.frish.lyricsauto.shared.domain.usecase.IsLyricsEnabledUseCase
 import com.frish.lyricsauto.shared.util.AppLogger
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.*
-import kotlinx.coroutines.flow.*
 import javax.inject.Inject
 
 @AndroidEntryPoint
 class LyricsNotificationListener : NotificationListenerService() {
 
-    @Inject lateinit var getLyricsUseCase: GetLyricsUseCase
-    @Inject lateinit var isLyricsEnabledUseCase: IsLyricsEnabledUseCase
+    @Inject lateinit var syncManager: LyricsSyncManager
     @Inject lateinit var musicStateRepository: MusicStateRepository
     @Inject lateinit var logger: AppLogger
 
     private val _serviceScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     private var _mediaSessionManager: MediaSessionManager? = null
+    @Volatile
     private var _activeController: MediaController? = null
-    private var _currentLyrics: Lyrics? = null
-    private val _metadataFlow = MutableSharedFlow<Pair<String, String>>(replay = 1)
+    @Volatile
     private var _syncJob: Job? = null
-    private var _lastSentLine: String? = null
 
     companion object {
         private const val TAG = "LyricsAuto"
@@ -48,7 +41,6 @@ class LyricsNotificationListener : NotificationListenerService() {
         super.onCreate()
         logger.i(TAG, "!!! Service Created !!!")
         _mediaSessionManager = getSystemService(MEDIA_SESSION_SERVICE) as MediaSessionManager
-        observeMetadata()
         observeMediaActions()
     }
 
@@ -56,32 +48,6 @@ class LyricsNotificationListener : NotificationListenerService() {
         super.onListenerConnected()
         logger.i(TAG, "!!! Listener Connected !!!")
         setupMediaListener()
-    }
-
-    @OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
-    private fun observeMetadata() {
-        _serviceScope.launch {
-            _metadataFlow
-                .debounce(500L)
-                .distinctUntilChanged()
-                .flatMapLatest { (artist, title) ->
-                    getLyricsUseCase(artist, title)
-                }
-                .collect { result ->
-                    result.onSuccess { lyrics ->
-                        logger.d(TAG, "Lyrics found for: ${lyrics.trackName}")
-                        _currentLyrics = lyrics
-                        musicStateRepository.updateFullLyrics(lyrics)
-                        _lastSentLine = null
-                        startLyricsSync()
-                    }
-                    result.onFailure { error ->
-                        logger.e(TAG, "Lyrics not found", error)
-                        musicStateRepository.updateFullLyrics(null)
-                        musicStateRepository.updateLine("Letra no encontrada")
-                    }
-                }
-        }
     }
 
     private fun observeMediaActions() {
@@ -125,13 +91,19 @@ class LyricsNotificationListener : NotificationListenerService() {
         _activeController = controller
         _activeController?.registerCallback(_controllerCallback)
         handleMetadataChange(controller.metadata)
-        musicStateRepository.updateIsPlaying(controller.playbackState?.state == PlaybackState.STATE_PLAYING)
+        syncManager.updatePlaybackState(
+            controller.playbackState?.state == PlaybackState.STATE_PLAYING,
+            controller.playbackState?.position ?: 0L
+        )
     }
 
     private val _controllerCallback = object : MediaController.Callback() {
         override fun onMetadataChanged(metadata: MediaMetadata?) = handleMetadataChange(metadata)
         override fun onPlaybackStateChanged(state: PlaybackState?) {
-            musicStateRepository.updateIsPlaying(state?.state == PlaybackState.STATE_PLAYING)
+            syncManager.updatePlaybackState(
+                state?.state == PlaybackState.STATE_PLAYING,
+                state?.position ?: 0L
+            )
             if (state?.state == PlaybackState.STATE_PLAYING) startLyricsSync()
         }
     }
@@ -139,35 +111,22 @@ class LyricsNotificationListener : NotificationListenerService() {
     private fun handleMetadataChange(metadata: MediaMetadata?) {
         val title = metadata?.getString(MediaMetadata.METADATA_KEY_TITLE) ?: return
         val artist = metadata.getString(MediaMetadata.METADATA_KEY_ARTIST) ?: ""
-        
-        // Update song info IMMEDIATELY
-        musicStateRepository.updateSong(artist, title)
-        
         val duration = metadata.getLong(MediaMetadata.METADATA_KEY_DURATION)
-        musicStateRepository.updateDuration(duration)
-
         val artwork = metadata.getBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART) 
             ?: metadata.getBitmap(MediaMetadata.METADATA_KEY_ART)
-        musicStateRepository.updateArtwork(artwork)
         
-        _serviceScope.launch { _metadataFlow.emit(artist to title) }
+        syncManager.updateMetadata(artist, title, duration, artwork)
     }
 
     private fun startLyricsSync() {
         _syncJob?.cancel()
         _syncJob = _serviceScope.launch {
-            while (isActive && _currentLyrics != null) {
+            while (isActive) {
                 val state = _activeController?.playbackState
                 if (state?.state == PlaybackState.STATE_PLAYING) {
-                    val pos = state.position
-                    musicStateRepository.updatePosition(pos)
-                    val line = _currentLyrics?.lines?.findLast { it.timestampMs <= pos }
-                    if (line != null && line.text != _lastSentLine) {
-                        _lastSentLine = line.text
-                        musicStateRepository.updateLine(line.text)
-                    }
+                    syncManager.updatePlaybackState(true, state.position)
                 }
-                delay(100)
+                delay(150)
             }
         }
     }

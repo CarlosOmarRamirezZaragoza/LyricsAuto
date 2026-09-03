@@ -6,24 +6,14 @@
 package com.frish.lyricsauto.mobile.presentation.lyrics
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.ListItem
-import androidx.compose.material3.ListItemDefaults
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SwipeToDismissBox
-import androidx.compose.material3.SwipeToDismissBoxValue
-import androidx.compose.material3.Text
-import androidx.compose.material3.rememberSwipeToDismissBoxState
+import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -39,7 +29,10 @@ import com.frish.lyricsauto.shared.domain.model.Lyrics
 @Composable
 fun LyricsListScreen(
     lyricsList: List<Lyrics>,
-    onDelete: (Lyrics) -> Unit
+    onDelete: (Lyrics) -> Unit,
+    currentSong: String = "",
+    currentLine: String = "",
+    onMirrorClick: () -> Unit = {}
 ) {
     Column(
         modifier = Modifier.fillMaxSize()
@@ -48,6 +41,7 @@ fun LyricsListScreen(
             text = stringResource(R.string.saved_lyrics_title),
             fontSize = 24.sp,
             fontWeight = FontWeight.Bold,
+            color = Color.White,
             modifier = Modifier.padding(16.dp)
         )
 
@@ -56,7 +50,7 @@ fun LyricsListScreen(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
             ) {
-                Text(text = stringResource(R.string.empty_lyrics_msg))
+                Text(text = stringResource(R.string.empty_lyrics_msg), color = Color.Gray)
             }
         } else {
             LazyColumn(
@@ -67,9 +61,14 @@ fun LyricsListScreen(
                     items = lyricsList,
                     key = { "${it.artistName}-${it.trackName}" }
                 ) { lyrics ->
+                    val isCurrent = "${lyrics.artistName} - ${lyrics.trackName}".equals(currentSong, ignoreCase = true)
+                    
                     _SwipeToDeleteItem(
                         lyrics = lyrics,
-                        onDelete = { onDelete(lyrics) }
+                        isCurrent = isCurrent,
+                        currentLine = if (isCurrent) currentLine else "",
+                        onDelete = { onDelete(lyrics) },
+                        onMirrorClick = onMirrorClick
                     )
                 }
             }
@@ -81,7 +80,10 @@ fun LyricsListScreen(
 @Composable
 private fun _SwipeToDeleteItem(
     lyrics: Lyrics,
-    onDelete: () -> Unit
+    isCurrent: Boolean,
+    currentLine: String,
+    onDelete: () -> Unit,
+    onMirrorClick: () -> Unit
 ) {
     val dismissState = rememberSwipeToDismissBoxState(
         confirmValueChange = {
@@ -116,11 +118,29 @@ private fun _SwipeToDeleteItem(
         },
         content = {
             ListItem(
-                headlineContent = { Text(lyrics.trackName) },
-                supportingContent = { Text(lyrics.artistName) },
+                headlineContent = { 
+                    Text(
+                        text = lyrics.trackName,
+                        color = if (isCurrent) Color.Yellow else Color.White,
+                        fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Normal
+                    ) 
+                },
+                supportingContent = { 
+                    Text(
+                        text = if (isCurrent && currentLine.isNotEmpty()) currentLine else lyrics.artistName,
+                        color = if (isCurrent) Color.LightGray else Color.Gray,
+                        maxLines = 1
+                    ) 
+                },
+                leadingContent = if (isCurrent) {
+                    { Icon(Icons.Default.MusicNote, contentDescription = null, tint = Color.Yellow) }
+                } else null,
                 colors = ListItemDefaults.colors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                )
+                    containerColor = if (isCurrent) Color(0x33A020F0) else Color.Transparent
+                ),
+                modifier = Modifier.clickable {
+                    if (isCurrent) onMirrorClick()
+                }
             )
         }
     )

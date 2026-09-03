@@ -1,7 +1,7 @@
 /**
  * Developer: CORZ (https://www.linkedin.com/in/omar-ramirez-6a51b7141/)
- * Date: 2024-09-01
- * Description: Car App Service with Hilt injection.
+ * Date: 2024-09-02
+ * Description: Car App Service with Hilt injection for repositories.
  */
 package com.frish.lyricsauto.shared
 
@@ -26,7 +26,6 @@ class MyCarAppService : CarAppService() {
     }
 
     override fun onCreateSession(): Session {
-        logger.i("CarAppService", "Creating new session for Android Auto")
         return MyCarAppSession(musicStateRepository, deleteLyricsUseCase, logger)
     }
 }
