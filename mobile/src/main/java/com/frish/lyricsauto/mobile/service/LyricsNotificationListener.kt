@@ -1,7 +1,7 @@
 /**
  * Developer: CORZ (https://www.linkedin.com/in/omar-ramirez-6a51b7141/)
  * Date: 2024-09-01
- * Description: Robust service with bi-directional media control via shared repository.
+ * Description: Service with seeking capabilities and metadata extraction.
  */
 package com.frish.lyricsauto.mobile.service
 
@@ -13,7 +13,6 @@ import android.media.session.MediaSessionManager
 import android.media.session.PlaybackState
 import android.service.notification.NotificationListenerService
 import android.util.Log
-import android.view.KeyEvent
 import com.frish.lyricsauto.shared.domain.model.Lyrics
 import com.frish.lyricsauto.shared.domain.repository.MediaAction
 import com.frish.lyricsauto.shared.domain.repository.MusicStateRepository
@@ -45,7 +44,6 @@ class LyricsNotificationListener : NotificationListenerService() {
 
     override fun onCreate() {
         super.onCreate()
-        Log.d(TAG, "!!! Service Created !!!")
         _mediaSessionManager = getSystemService(MEDIA_SESSION_SERVICE) as MediaSessionManager
         observeMetadata()
         observeMediaActions()
@@ -53,7 +51,6 @@ class LyricsNotificationListener : NotificationListenerService() {
 
     override fun onListenerConnected() {
         super.onListenerConnected()
-        Log.d(TAG, "!!! Listener Connected !!!")
         setupMediaListener()
     }
 
@@ -65,16 +62,19 @@ class LyricsNotificationListener : NotificationListenerService() {
                 .distinctUntilChanged()
                 .flatMapLatest { (artist, title) ->
                     musicStateRepository.updateSong(artist, title)
-                    musicStateRepository.updateLine("Buscando letra...")
                     getLyricsUseCase(artist, title)
                 }
                 .collect { result ->
                     result.onSuccess { lyrics ->
                         _currentLyrics = lyrics
+                        musicStateRepository.updateFullLyrics(lyrics)
                         _lastSentLine = null
                         startLyricsSync()
                     }
-                    result.onFailure { musicStateRepository.updateLine("Letra no encontrada") }
+                    result.onFailure {
+                        musicStateRepository.updateFullLyrics(null)
+                        musicStateRepository.updateLine("Letra no encontrada")
+                    }
                 }
         }
     }
@@ -83,17 +83,16 @@ class LyricsNotificationListener : NotificationListenerService() {
         _serviceScope.launch {
             musicStateRepository.mediaAction.collect { action ->
                 val controller = _activeController ?: return@collect
+                val currentPos = controller.playbackState?.position ?: 0L
                 when (action) {
                     MediaAction.PLAY_PAUSE -> {
-                        val state = controller.playbackState?.state
-                        if (state == PlaybackState.STATE_PLAYING) {
-                            controller.transportControls.pause()
-                        } else {
-                            controller.transportControls.play()
-                        }
+                        if (controller.playbackState?.state == PlaybackState.STATE_PLAYING) controller.transportControls.pause()
+                        else controller.transportControls.play()
                     }
                     MediaAction.NEXT -> controller.transportControls.skipToNext()
                     MediaAction.PREVIOUS -> controller.transportControls.skipToPrevious()
+                    MediaAction.SEEK_FORWARD -> controller.transportControls.seekTo(currentPos + 10000)
+                    MediaAction.SEEK_BACKWARD -> controller.transportControls.seekTo(currentPos - 10000)
                 }
             }
         }
@@ -119,21 +118,29 @@ class LyricsNotificationListener : NotificationListenerService() {
         _activeController?.unregisterCallback(_controllerCallback)
         _activeController = controller
         _activeController?.registerCallback(_controllerCallback)
-        pushMetadata(controller.metadata)
+        handleMetadataChange(controller.metadata)
         musicStateRepository.updateIsPlaying(controller.playbackState?.state == PlaybackState.STATE_PLAYING)
     }
 
     private val _controllerCallback = object : MediaController.Callback() {
-        override fun onMetadataChanged(metadata: MediaMetadata?) = pushMetadata(metadata)
+        override fun onMetadataChanged(metadata: MediaMetadata?) = handleMetadataChange(metadata)
         override fun onPlaybackStateChanged(state: PlaybackState?) {
             musicStateRepository.updateIsPlaying(state?.state == PlaybackState.STATE_PLAYING)
             if (state?.state == PlaybackState.STATE_PLAYING) startLyricsSync()
         }
     }
 
-    private fun pushMetadata(metadata: MediaMetadata?) {
+    private fun handleMetadataChange(metadata: MediaMetadata?) {
         val title = metadata?.getString(MediaMetadata.METADATA_KEY_TITLE) ?: return
         val artist = metadata.getString(MediaMetadata.METADATA_KEY_ARTIST) ?: ""
+        
+        val duration = metadata.getLong(MediaMetadata.METADATA_KEY_DURATION)
+        musicStateRepository.updateDuration(duration)
+
+        val artwork = metadata.getBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART) 
+            ?: metadata.getBitmap(MediaMetadata.METADATA_KEY_ART)
+        musicStateRepository.updateArtwork(artwork)
+        
         _serviceScope.launch { _metadataFlow.emit(artist to title) }
     }
 
@@ -144,13 +151,14 @@ class LyricsNotificationListener : NotificationListenerService() {
                 val state = _activeController?.playbackState
                 if (state?.state == PlaybackState.STATE_PLAYING) {
                     val pos = state.position
+                    musicStateRepository.updatePosition(pos)
                     val line = _currentLyrics?.lines?.findLast { it.timestampMs <= pos }
                     if (line != null && line.text != _lastSentLine) {
                         _lastSentLine = line.text
                         musicStateRepository.updateLine(line.text)
                     }
                 }
-                delay(500)
+                delay(100)
             }
         }
     }
